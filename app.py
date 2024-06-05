@@ -11,9 +11,9 @@ import requests
 from PIL import Image
 
 
-URL = "http://127.0.0.1:8188/prompt"
-INPUT_DIR = "replace with comfyui input dir path"
-OUTPUT_DIR = "replace with comfyui ouput directory path"
+URL = "http://66.114.112.70:11021/prompt"
+INPUT_DIR = "./input"
+OUTPUT_DIR = "./output"
 
 cached_seed = 0
 

@@ -5,3 +5,6 @@ venv/
 *.egg-info
 .pytest_cache
 *.code-workspace
+input/
+output/
+log.*

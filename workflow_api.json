@@ -1,98 +1,106 @@
 {
-  "3": {
+  "1": {
     "inputs": {
-      "seed": 156680208700286,
-      "steps": 8,
-      "cfg": 6.5,
-      "sampler_name": "euler_ancestral",
+      "seed": 820897414316274,
+      "steps": 30,
+      "cfg": 8,
+      "sampler_name": "euler",
       "scheduler": "normal",
-      "denoise": 0.5,
+      "denoise": 1,
       "model": [
-        "4",
-        0
-      ],
-      "positive": [
-        "6",
-        0
-      ],
-      "negative": [
-        "7",
-        0
-      ],
-      "latent_image": [
-        "10",
-        0
-      ]
-    },
-    "class_type": "KSampler"
-  },
-  "4": {
-    "inputs": {
-      "ckpt_name": "aniverse_thxEd14Pruned.safetensors"
-    },
-    "class_type": "CheckpointLoaderSimple"
-  },
-  "6": {
-    "inputs": {
-      "text": "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,",
-      "clip": [
-        "4",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode"
-  },
-  "7": {
-    "inputs": {
-      "text": "text, watermark, nsfw, nude",
-      "clip": [
-        "4",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode"
-  },
-  "8": {
-    "inputs": {
-      "samples": [
         "3",
         0
       ],
-      "vae": [
+      "positive": [
+        "2",
+        0
+      ],
+      "negative": [
         "4",
-        2
-      ]
-    },
-    "class_type": "VAEDecode"
-  },
-  "9": {
-    "inputs": {
-      "filename_prefix": "ComfyUI",
-      "images": [
-        "8",
+        0
+      ],
+      "latent_image": [
+        "5",
         0
       ]
     },
-    "class_type": "SaveImage"
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
   },
-  "10": {
+  "2": {
     "inputs": {
-      "pixels": [
-        "11",
+      "text": "5 years boy, photorealistic. standing on the beach\n",
+      "clip": [
+        "3",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "3": {
+    "inputs": {
+      "ckpt_name": "majicmixRealistic_v7.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "4": {
+    "inputs": {
+      "text": "bad quality",
+      "clip": [
+        "3",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "5": {
+    "inputs": {
+      "width": 720,
+      "height": 1280,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "6": {
+    "inputs": {
+      "samples": [
+        "1",
         0
       ],
       "vae": [
-        "4",
+        "3",
         2
       ]
     },
-    "class_type": "VAEEncode"
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
   },
-  "11": {
+  "7": {
     "inputs": {
-      "image": "test_api.jpg",
-      "choose file to upload": "image"
+      "images": [
+        "6",
+        0
+      ]
     },
-    "class_type": "LoadImage"
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
   }
 }
