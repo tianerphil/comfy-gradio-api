@@ -7,9 +7,10 @@ import urllib.parse
 import uuid
 import websocket
 import logging
+import random
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 class ComfyUIClient:
     def __init__(self, server_address, port, user_id=None):
@@ -50,7 +51,7 @@ class ComfyUIClient:
                 out = self.ws.recv()
                 if isinstance(out, str):
                     message = json.loads(out)
-                    print("STR Received from ComfyUI server:", message)
+                    #print("STR Received from ComfyUI server:", message)
                     if message['type'] == 'executing':
                         data = message['data']
                         if data['node'] is None and data['prompt_id'] == prompt_id:
@@ -59,7 +60,7 @@ class ComfyUIClient:
                     continue  # previews are binary data
 
             history = self.get_history(prompt_id)[prompt_id]
-            print("OBJ Received from ComfyUI server:", history)
+            #print("OBJ Received from ComfyUI server:", history)
             for o in history['outputs']:
                 for node_id in history['outputs']:
                     node_output = history['outputs'][node_id]
@@ -85,7 +86,7 @@ os.makedirs(output_dir, exist_ok=True)
 
 # Instantiate the ComfyUIClient
 server_address = "66.114.112.70"
-port = "11416"
+port = "20400"
 client = ComfyUIClient(server_address, port)
 
 def generate_image(prompt_text):
@@ -96,11 +97,17 @@ def generate_image(prompt_text):
             workflow = json.load(f)
         print("Loaded workflow:", workflow)
 
+        # Find and update the 'KSampler' node (node "3")
+        ksampler_node = workflow.get("3")
+        if not ksampler_node:
+            return "KSampler node not found in the workflow JSON."
+        ksampler_node["inputs"]["seed"] = random.randint(1, 1500000)
+        print("Updated KSampler node:", ksampler_node)
+
         # Find and update the 'pos_prompt' node (node "6")
         pos_prompt_node = workflow.get("6")
         if not pos_prompt_node:
             return "pos_prompt node not found in the workflow JSON."
-
         pos_prompt_node['inputs']['text'] = str(prompt_text)
         print("Updated pos_prompt node:", pos_prompt_node)
 
@@ -112,7 +119,7 @@ def generate_image(prompt_text):
     print("Connected to ComfyUI server")
     try:
         images = client.get_images(workflow)
-        print("Retrieved images:", images)
+        #print("Retrieved images:", images)
     except ValueError as e:
         return str(e)
 
