@@ -1,7 +1,6 @@
 import os
 import json
 import gradio as gr
-from PIL import Image
 import urllib.request
 import urllib.parse
 import uuid
@@ -10,13 +9,21 @@ import logging
 import random
 
 # Set up logging
-#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 class ComfyUIClient:
     def __init__(self, server_address, port, user_id=None):
         self.server_address = f"{server_address}:{port}"
         self.user_id = user_id if user_id else str(uuid.uuid4())
         self.ws = None
+        self.workflow = None
+
+    def __enter__(self):
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close_connection()
 
     def connect(self):
         self.ws = websocket.WebSocket()
@@ -27,8 +34,27 @@ class ComfyUIClient:
             self.ws.close()
             self.ws = None
 
-    def queue_prompt(self, prompt):
-        p = {"prompt": prompt, "client_id": self.user_id}
+    def load_workflow(self, filepath):
+        with open(filepath, 'r') as f:
+            self.workflow = json.load(f)
+        logging.debug("Loaded workflow: %s", self.workflow)
+
+    def update_seed_node(self, node_id, seed_value):
+        seed_node = self.workflow.get(str(node_id))
+        if not seed_node:
+            raise ValueError(f"Seed node {node_id} not found in the workflow JSON.")
+        seed_node["inputs"]["seed"] = seed_value
+        logging.debug("Updated seed node %s: %s", node_id, seed_node)
+
+    def update_positive_prompt(self, node_id, prompt_text):
+        pos_prompt_node = self.workflow.get(str(node_id))
+        if not pos_prompt_node:
+            raise ValueError(f"Positive prompt node {node_id} not found in the workflow JSON.")
+        pos_prompt_node['inputs']['text'] = str(prompt_text)
+        logging.debug("Updated positive prompt node %s: %s", node_id, pos_prompt_node)
+
+    def queue_prompt(self):
+        p = {"prompt": self.workflow, "client_id": self.user_id}
         data = json.dumps(p).encode('utf-8')
         req = urllib.request.Request(f"http://{self.server_address}/prompt", data=data)
         return json.loads(urllib.request.urlopen(req).read())
@@ -43,15 +69,14 @@ class ComfyUIClient:
         with urllib.request.urlopen(f"http://{self.server_address}/history/{prompt_id}") as response:
             return json.loads(response.read())
 
-    def get_images(self, prompt):
-        prompt_id = self.queue_prompt(prompt)['prompt_id']
+    def get_images(self):
+        prompt_id = self.queue_prompt()['prompt_id']
         output_images = {}
         try:
             while True:
                 out = self.ws.recv()
                 if isinstance(out, str):
                     message = json.loads(out)
-                    #print("STR Received from ComfyUI server:", message)
                     if message['type'] == 'executing':
                         data = message['data']
                         if data['node'] is None and data['prompt_id'] == prompt_id:
@@ -60,7 +85,6 @@ class ComfyUIClient:
                     continue  # previews are binary data
 
             history = self.get_history(prompt_id)[prompt_id]
-            #print("OBJ Received from ComfyUI server:", history)
             for o in history['outputs']:
                 for node_id in history['outputs']:
                     node_output = history['outputs'][node_id]
@@ -79,65 +103,45 @@ class ComfyUIClient:
 
         return output_images
 
-    
 # Create output directory if it doesn't exist
 output_dir = "./output"
 os.makedirs(output_dir, exist_ok=True)
 
 # Instantiate the ComfyUIClient
 server_address = "66.114.112.70"
-port = "20400"
-client = ComfyUIClient(server_address, port)
+port = "13152"
 
 def generate_image(prompt_text):
     print("Received prompt_text:", prompt_text)
     try:
-        # Load the workflow JSON from file
-        with open('workflow_api.json', 'r') as f:
-            workflow = json.load(f)
-        print("Loaded workflow:", workflow)
+        with ComfyUIClient(server_address=server_address, port=port) as client:
+            client.load_workflow('workflow_api.json')
 
-        # Find and update the 'KSampler' node (node "3")
-        ksampler_node = workflow.get("3")
-        if not ksampler_node:
-            return "KSampler node not found in the workflow JSON."
-        ksampler_node["inputs"]["seed"] = random.randint(1, 1500000)
-        print("Updated KSampler node:", ksampler_node)
+            # Update seed and positive prompt nodes
+            client.update_seed_node(3, random.randint(1, 1500000))
+            client.update_positive_prompt(6, prompt_text)
 
-        # Find and update the 'pos_prompt' node (node "6")
-        pos_prompt_node = workflow.get("6")
-        if not pos_prompt_node:
-            return "pos_prompt node not found in the workflow JSON."
-        pos_prompt_node['inputs']['text'] = str(prompt_text)
-        print("Updated pos_prompt node:", pos_prompt_node)
+            images = client.get_images()
 
-    except (json.JSONDecodeError, KeyError) as e:
-        print("Error loading or updating the workflow JSON:", e)
-        return f"Error loading or updating the workflow JSON: {e}"
+            # Process the 'last_node' (node "9")
+            last_node_images = images.get("9", [])
+            print(f"Retrieved {len(last_node_images)} images!" )
+            if last_node_images:
+                saved_image_paths = []
+                for i, image_data in enumerate(last_node_images):
+                    image_path = os.path.join(output_dir, f"generated_image_{i}.png")
+                    with open(image_path, 'wb') as f:
+                        f.write(image_data)
+                    saved_image_paths.append(image_path)
+                    print(f"Image saved at: {image_path}")
 
-    client.connect()
-    print("Connected to ComfyUI server")
-    try:
-        images = client.get_images(workflow)
-        #print("Retrieved images:", images)
-    except ValueError as e:
+                return saved_image_paths
+            else:
+                print("No images were generated.")
+                return "No images were generated."
+
+    except Exception as e:
         return str(e)
-
-    # Find and process the 'last_node' (node "9")
-    last_node_images = images.get("9", [])
-    if last_node_images:
-        saved_image_paths = []
-        for i, image_data in enumerate(last_node_images):
-            image_path = os.path.join(output_dir, f"generated_image_{i}.png")
-            with open(image_path, 'wb') as f:
-                f.write(image_data)
-            saved_image_paths.append(image_path)
-            print(f"Image saved at: {image_path}")
-
-        return saved_image_paths
-    else:
-        print("No images were generated.")
-        return "No images were generated."
 
 # Define the Gradio interface
 iface = gr.Interface(
