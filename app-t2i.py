@@ -16,6 +16,9 @@ logging.basicConfig(level=logging.DEBUG)
 output_dir = "./output"
 os.makedirs(output_dir, exist_ok=True)
 
+# workflow template for text to image
+workflow_template = 't2i_workflow_api.json'
+
 # Instantiate the ComfyUIClient
 server_address = "66.114.112.70"
 port = "13152"
@@ -24,7 +27,7 @@ def generate_image(prompt_text):
     print("Received prompt_text:", prompt_text)
     try:
         with ComfyUIClient(server_address=server_address, port=port) as client:
-            client.load_workflow('workflow_api.json')
+            client.load_workflow(workflow_template)
 
             # Update seed and positive prompt nodes
             client.update_seed_node(3, random.randint(1, 1500000))

@@ -8,3 +8,5 @@ venv/
 input/
 output/
 log.*
+DEBUG/
+.DS_Store
